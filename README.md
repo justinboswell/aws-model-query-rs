@@ -1,0 +1,1 @@
+# aws-model-query-rs
