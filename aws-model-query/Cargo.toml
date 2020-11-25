@@ -1,0 +1,15 @@
+[package]
+name = "aws-model-query"
+version = "1.0.0-dev"
+authors = ["Justin Boswell (boswej@amazon.com)"]
+edition = "2018"
+
+[dependencies]
+walkdir = "2"
+json = "*"
+
+[[bin]]
+name = "awsmq"
+path = "src/main.rs"
+test = false
+bench = false
