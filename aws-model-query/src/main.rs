@@ -2,6 +2,7 @@
 use std::env;
 use std::fs;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 //#[macro_use]
 extern crate json;
@@ -32,21 +33,21 @@ struct Structure {
 }
 
 #[derive(Debug)]
-struct Operation<'a> {
+struct Operation {
     name: String,
-    input: Option<&'a Structure>,
-    output: Option<&'a Structure>,
+    input: Option<Rc<Structure>>,
+    output: Option<Rc<Structure>>,
 }
 
 #[derive(Debug)]
-struct Service<'a> {
+struct Service {
     name: String,
-    operations: HashMap<String, Operation<'a>>,
-    structures: HashMap<String, Structure>,
+    operations: HashMap<String, Rc<Operation>>,
+    structures: HashMap<String, Rc<Structure>>,
 }
 
-impl<'a> Service<'_> {
-    fn new() -> Service<'a> {
+impl Service {
+    fn new() -> Service {
         Service {
             name: String::from("UNKNOWN"),
             operations: HashMap::new(),
@@ -82,10 +83,10 @@ fn main() -> Result<(), Box<dyn std::error::Error + 'static>>{
                     for (name, member) in shape["members"].entries() {
                         members.insert(String::from(name), String::from(member["target"].as_str().unwrap()));
                     }
-                    service.structures.insert(String::from(name), Structure {
+                    service.structures.insert(String::from(name), Rc::new(Structure {
                         name: String::from(name),
                         members: members
-                    });
+                    }));
                 },
                 // cache operations, resolve them once all structures are resolved
                 "operation" => {
@@ -99,15 +100,15 @@ fn main() -> Result<(), Box<dyn std::error::Error + 'static>>{
             let operation = Operation {
                 name: String::from(name),
                 input: match input {
-                    Some(input) => Some(&service.structures[input]),
+                    Some(input) => Some(service.structures[input].clone()),
                     None => None
                 },
                 output: match output {
-                    Some(output) => Some(&service.structures[output]),
+                    Some(output) => Some(service.structures[output].clone()),
                     None => None
                 }
             };
-            service.operations.insert(name.to_string(), operation);
+            service.operations.insert(name.to_string(), Rc::new(operation));
         }
 
         let ops = service.operations.keys()
@@ -117,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error + 'static>>{
             );
         for op in ops.map(|op| &service.operations[op]) {
             println!("    Query Operation: {}", op.name);
-            match op.input {
+            match &op.input {
                 Some(input) => {
                     for name in input.members.keys() {
                         if name.to_ascii_lowercase().starts_with("tag") {
